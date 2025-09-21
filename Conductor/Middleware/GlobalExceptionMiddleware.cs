@@ -1,7 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using Conductor.Attributes;
-using Conductor.Core;
+using Conductor.Transport;
 using Conductor.Transport.Http;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Builder;
@@ -44,7 +44,7 @@ public class GlobalExceptionMiddleware
         var response = context.Response;
         response.ContentType = "application/json";
 
-        var apiResponse = exception switch
+        var (message, errors) = exception switch
         {
             ValidationException validationEx => HandleValidationException(validationEx, ref response),
             ArgumentException argEx => HandleArgumentException(argEx, ref response),
@@ -55,105 +55,67 @@ public class GlobalExceptionMiddleware
             _ => HandleGenericException(exception, ref response)
         };
 
-        // Add request metadata
-        apiResponse.Metadata = new ApiMetadata
+        var metadata = new ResponseMetadata
         {
             RequestId = context.TraceIdentifier,
-            Timestamp = DateTime.UtcNow,
-            Version = "1.0"
+            CorrelationId = context.TraceIdentifier,
+            Timestamp = DateTime.UtcNow
         };
 
+        var apiResponse = ApiResponse<object>.CreateError(message, errors, metadata);
         var jsonResponse = JsonSerializer.Serialize(apiResponse, _jsonOptions);
         await response.WriteAsync(jsonResponse);
     }
 
-    private static ApiResponse HandleValidationException(ValidationException validationEx, ref HttpResponse response)
+    private static (string message, List<string> errors) HandleValidationException(ValidationException validationEx, ref HttpResponse response)
     {
         response.StatusCode = (int)HttpStatusCode.BadRequest;
 
-        var validationErrors = validationEx.ValidationResult.Errors
-            .Select(ValidationErrorDetail.FromValidationError)
+        var errors = validationEx.ValidationResult.Errors
+            .Select(e => $"{e.PropertyName}: {e.ErrorMessage}")
             .ToList();
 
-        return ApiResponse.ValidationFailureResult(validationErrors, "Input validation failed");
+        return ("Input validation failed", errors);
     }
 
-    private static ApiResponse HandleArgumentException(ArgumentException argEx, ref HttpResponse response)
+    private static (string message, List<string> errors) HandleArgumentException(ArgumentException argEx, ref HttpResponse response)
     {
         response.StatusCode = (int)HttpStatusCode.BadRequest;
-
-        return ApiResponse.FailureResult(new ApiError
-        {
-            Code = "INVALID_ARGUMENT",
-            Message = "Invalid argument provided",
-            Type = "ArgumentError",
-            Details = argEx.Message
-        });
+        return ("INVALID_ARGUMENT: Invalid argument provided", new List<string> { argEx.Message });
     }
 
-    private static ApiResponse HandleUnauthorizedException(ref HttpResponse response)
+    private static (string message, List<string> errors) HandleUnauthorizedException(ref HttpResponse response)
     {
         response.StatusCode = (int)HttpStatusCode.Unauthorized;
-
-        return ApiResponse.FailureResult(new ApiError
-        {
-            Code = "UNAUTHORIZED",
-            Message = "Authentication required",
-            Type = "AuthenticationError"
-        });
+        return ("UNAUTHORIZED: Authentication required", new List<string>());
     }
 
-    private static ApiResponse HandleNotFoundException(ref HttpResponse response)
+    private static (string message, List<string> errors) HandleNotFoundException(ref HttpResponse response)
     {
         response.StatusCode = (int)HttpStatusCode.NotFound;
-
-        return ApiResponse.FailureResult(new ApiError
-        {
-            Code = "NOT_FOUND",
-            Message = "The requested resource was not found",
-            Type = "NotFoundError"
-        });
+        return ("NOT_FOUND: The requested resource was not found", new List<string>());
     }
 
-    private static ApiResponse HandleTimeoutException(ref HttpResponse response)
+    private static (string message, List<string> errors) HandleTimeoutException(ref HttpResponse response)
     {
         response.StatusCode = (int)HttpStatusCode.RequestTimeout;
-
-        return ApiResponse.FailureResult(new ApiError
-        {
-            Code = "TIMEOUT",
-            Message = "The request timed out",
-            Type = "TimeoutError"
-        });
+        return ("TIMEOUT: The request timed out", new List<string>());
     }
 
-    private static ApiResponse HandleInvalidOperationException(InvalidOperationException invalidOpEx, ref HttpResponse response)
+    private static (string message, List<string> errors) HandleInvalidOperationException(InvalidOperationException invalidOpEx, ref HttpResponse response)
     {
         response.StatusCode = (int)HttpStatusCode.BadRequest;
-
-        return ApiResponse.FailureResult(new ApiError
-        {
-            Code = "INVALID_OPERATION",
-            Message = "Invalid operation",
-            Type = "InvalidOperationError",
-            Details = invalidOpEx.Message
-        });
+        return ("INVALID_OPERATION: Invalid operation", new List<string> { invalidOpEx.Message });
     }
 
-    private static ApiResponse HandleGenericException(Exception exception, ref HttpResponse response)
+    private static (string message, List<string> errors) HandleGenericException(Exception exception, ref HttpResponse response)
     {
         response.StatusCode = (int)HttpStatusCode.InternalServerError;
-
-        return ApiResponse.FailureResult(new ApiError
-        {
-            Code = "INTERNAL_ERROR",
-            Message = "An internal server error occurred",
-            Type = "InternalServerError",
-            Details = exception.Message,
+        var errors = new List<string> { exception.Message };
 #if DEBUG
-            StackTrace = exception.StackTrace
+        if (!string.IsNullOrEmpty(exception.StackTrace)) errors.Add($"StackTrace: {exception.StackTrace}");
 #endif
-        });
+        return ("INTERNAL_ERROR: An internal server error occurred", errors);
     }
 }
 

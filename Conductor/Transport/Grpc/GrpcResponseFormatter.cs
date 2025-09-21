@@ -1,5 +1,7 @@
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using Conductor.Transport;
+using ValidationExceptionAlias = Conductor.Attributes.ValidationException;
 
 namespace Conductor.Transport.Grpc;
 
@@ -68,7 +70,7 @@ public class GrpcResponseFormatter : BaseResponseFormatter<object>
     {
         return exception switch
         {
-            Validation.ValidationException => "Validation failed",
+            ValidationExceptionAlias => "Validation failed",
             UnauthorizedAccessException => "Access denied",
             ArgumentException => "Invalid request",
             InvalidOperationException => "Invalid operation",

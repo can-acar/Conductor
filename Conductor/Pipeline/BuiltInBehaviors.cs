@@ -3,6 +3,8 @@ using System.Diagnostics;
 using Conductor.Attributes;
 using Conductor.Core;
 using Conductor.Validation;
+using ValidationResultAlias = Conductor.Attributes.ValidationResult;
+using ValidationExceptionAlias = Conductor.Attributes.ValidationException;
 
 namespace Conductor.Pipeline;
 
@@ -66,7 +68,7 @@ public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TReques
                 _logger.LogWarning("Validation failed for {RequestName}: {ValidationErrors}",
                     typeof(TRequest).Name, string.Join(", ", failures.Select(f => f.ErrorMessage)));
 
-                throw new Conductor.Validation.ValidationException(Conductor.Validation.ValidationResult.Failure(failures.ToArray()));
+                throw new ValidationExceptionAlias(ValidationResultAlias.Failure(failures.ToArray()));
             }
         }
 

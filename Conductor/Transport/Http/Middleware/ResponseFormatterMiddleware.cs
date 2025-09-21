@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Text;
 using System.Text.Json;
+using ValidationExceptionAlias = Conductor.Attributes.ValidationException;
 
 namespace Conductor.Transport.Http.Middleware;
 
@@ -54,7 +55,7 @@ public class ResponseFormatterMiddleware
                 await CopyOriginalResponse(context, responseBody, originalBodyStream);
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             // Exception handling is done in GlobalExceptionMiddleware
             // This middleware only handles response formatting
@@ -75,7 +76,7 @@ public class ResponseFormatterMiddleware
         if (string.IsNullOrEmpty(responseContent))
         {
             // Empty response - create success response without data
-            var emptyResponse = await _responseFormatter.FormatSuccessAsync<object>(null, null);
+            var emptyResponse = await _responseFormatter.FormatSuccessAsync<object>(null!, new Conductor.Transport.ResponseMetadata());
             await WriteFormattedResponse(context, emptyResponse, originalBodyStream);
             return;
         }
@@ -84,13 +85,13 @@ public class ResponseFormatterMiddleware
         {
             // Try to parse existing JSON and wrap it
             var existingData = JsonSerializer.Deserialize<object>(responseContent);
-            var wrappedResponse = await _responseFormatter.FormatSuccessAsync(existingData, null);
+            var wrappedResponse = await _responseFormatter.FormatSuccessAsync(existingData, new Conductor.Transport.ResponseMetadata());
             await WriteFormattedResponse(context, wrappedResponse, originalBodyStream);
         }
         catch (JsonException)
         {
             // Not JSON content - wrap as string
-            var wrappedResponse = await _responseFormatter.FormatSuccessAsync(responseContent, null);
+            var wrappedResponse = await _responseFormatter.FormatSuccessAsync(responseContent, new Conductor.Transport.ResponseMetadata());
             await WriteFormattedResponse(context, wrappedResponse, originalBodyStream);
         }
     }
@@ -162,7 +163,7 @@ public class GlobalExceptionMiddleware
     {
         return exception switch
         {
-            Validation.ValidationException => 400, // Bad Request
+            ValidationExceptionAlias => 400, // Bad Request
             ArgumentException => 400, // Bad Request
             UnauthorizedAccessException => 401, // Unauthorized
             System.Security.SecurityException => 403, // Forbidden
@@ -193,10 +194,7 @@ public class CorrelationIdMiddleware
         // Add to response headers
         context.Response.OnStarting(() =>
         {
-            if (!context.Response.Headers.ContainsKey("X-Correlation-ID"))
-            {
-                context.Response.Headers.Add("X-Correlation-ID", correlationId);
-            }
+            context.Response.Headers["X-Correlation-ID"] = correlationId;
             return Task.CompletedTask;
         });
 
@@ -218,7 +216,7 @@ public class CorrelationIdMiddleware
         if (string.IsNullOrEmpty(correlationId))
         {
             correlationId = Guid.NewGuid().ToString();
-            context.Request.Headers.Add("X-Correlation-ID", correlationId);
+            context.Request.Headers["X-Correlation-ID"] = correlationId;
         }
 
         return correlationId;

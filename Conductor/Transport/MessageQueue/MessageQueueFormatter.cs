@@ -1,4 +1,6 @@
 using Microsoft.Extensions.Logging;
+using Conductor.Transport;
+using ValidationExceptionAlias = Conductor.Attributes.ValidationException;
 using System.Text.Json;
 
 namespace Conductor.Transport.MessageQueue;
@@ -125,7 +127,7 @@ public class MessageQueueFormatter : BaseResponseFormatter<MessageQueueResponse>
     {
         return exception switch
         {
-            Validation.ValidationException => "Validation failed",
+            ValidationExceptionAlias => "Validation failed",
             UnauthorizedAccessException => "Access denied",
             ArgumentException => "Invalid request",
             InvalidOperationException => "Invalid operation",

@@ -8,7 +8,15 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <Folder Include="Modules\" />
+        <Folder Include="Modules\" />
+    </ItemGroup>
+
+    <!-- Exclude example files from library build -->
+    <ItemGroup>
+      <Compile Remove="Examples\**\*.*" />
+      <None Include="Examples\**\*.*" />
+      <Compile Remove="Transport\Examples\**\*.*" />
+      <None Include="Transport\Examples\**\*.*" />
     </ItemGroup>
 
     <ItemGroup>

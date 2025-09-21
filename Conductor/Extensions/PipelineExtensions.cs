@@ -137,10 +137,10 @@ public static class PipelineExtensions
             options.WarningThreshold = warningThreshold;
         });
 
-        services.AddSingleton<TimeSpan>(provider =>
+        services.AddSingleton(typeof(TimeSpan), provider =>
         {
             var options = provider.GetService<Microsoft.Extensions.Options.IOptions<PipelinePerformanceOptions>>();
-            return options?.Value.WarningThreshold ?? TimeSpan.FromMilliseconds(500);
+            return (object)(options?.Value.WarningThreshold ?? TimeSpan.FromMilliseconds(500));
         });
 
         return services;

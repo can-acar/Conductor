@@ -1,9 +1,33 @@
 # Conductor Framework
 
-[![.NET](https://img.shields.io/badge/.NET-9.0-purple.svg)](https://dotnet.microsoft.com/download)
+[![.NET](https://img.shields.io/badge/.NET-9.0+-purple.svg)](https://dotnet.microsoft.com/download)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A powerful, lightweight .NET framework implementing the mediator pattern with advanced features including pipelines, caching, validation, transactions, auditing, and saga orchestration.
+
+> **Note**: This framework requires .NET 9.0 or higher. If you're using an older version of .NET, you may need to adjust the target framework in the project files.
+
+## 📑 Table of Contents
+
+- [✨ Key Features](#-key-features)
+- [🚀 Quick Start](#-quick-start)
+- [🏗️ Architecture Overview](#️-architecture-overview)
+- [📖 Detailed Usage Examples](#-detailed-usage-examples)
+  - [Caching](#caching)
+  - [Validation](#validation)
+  - [Transactions](#transactions)
+  - [Auditing](#auditing)
+  - [Authorization](#authorization)
+  - [Pipeline Behaviors](#pipeline-behaviors)
+  - [Saga Orchestration](#saga-orchestration)
+  - [Events](#events)
+- [⚙️ Configuration](#️-configuration)
+- [🧪 Testing](#-testing)
+- [🔧 Advanced Features](#-advanced-features)
+- [🚀 Performance Considerations](#-performance-considerations)
+- [🤝 Contributing](#-contributing)
+- [📄 License](#-license)
+- [🆘 Support](#-support)
 
 ## ✨ Key Features
 
@@ -22,10 +46,16 @@ A powerful, lightweight .NET framework implementing the mediator pattern with ad
 
 ### Installation
 
-Add the Conductor framework to your .NET 9.0 project:
+Add the Conductor framework to your .NET 9.0+ project:
 
 ```xml
 <ProjectReference Include="path/to/Conductor/Conductor.csproj" />
+```
+
+Or install via NuGet when available:
+
+```bash
+dotnet add package Conductor.Framework
 ```
 
 ### Basic Setup

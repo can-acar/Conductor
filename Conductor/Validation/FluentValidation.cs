@@ -1,11 +1,12 @@
 using System.Linq.Expressions;
 using System.Reflection;
 using Conductor.Attributes;
+using Conductor.Interfaces;
 
 namespace Conductor.Validation;
 
 // Core validation interface
-public interface IValidator<T>
+public interface IValidator<in T>
 {
     Task<ValidationResult> ValidateAsync(T instance, CancellationToken cancellationToken = default);
     ValidationResult Validate(T instance);
@@ -14,7 +15,7 @@ public interface IValidator<T>
 // Fluent Validation Infrastructure
 public abstract class AbstractValidator<T> : IValidator<T>
 {
-    private readonly List<IValidationRule<T>> _rules = new();
+    private readonly List<IValidationRule<T>> _rules = [];
 
     protected IRuleBuilder<T, TProperty> RuleFor<TProperty>(Expression<Func<T, TProperty>> expression)
     {
@@ -40,7 +41,7 @@ public abstract class AbstractValidator<T> : IValidator<T>
     }
 }
 
-public interface IRuleBuilder<T, TProperty>
+public interface IRuleBuilder<out T, TProperty>
 {
     IRuleBuilder<T, TProperty> NotNull();
     IRuleBuilder<T, TProperty> NotEmpty();
@@ -64,16 +65,10 @@ public interface IRuleBuilder<T, TProperty>
     IRuleBuilder<T, TProperty> Unless(Func<T, bool> predicate);
 }
 
-public interface IValidationRule<T>
-{
-    Task<IEnumerable<ValidationError>> ValidateAsync(T instance, CancellationToken cancellationToken = default);
-}
-
 public class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty>
 {
     private readonly Expression<Func<T, TProperty>> _expression;
-    private readonly List<IValidationRule<T>> _rules;
-    private readonly List<IPropertyValidator<T, TProperty>> _validators = new();
+    private readonly List<IPropertyValidator<T, TProperty>> _validators = [];
     private string? _customMessage;
     private string? _customErrorCode;
     private Func<T, bool>? _condition;
@@ -82,10 +77,9 @@ public class RuleBuilder<T, TProperty> : IRuleBuilder<T, TProperty>
     public RuleBuilder(Expression<Func<T, TProperty>> expression, List<IValidationRule<T>> rules)
     {
         _expression = expression;
-        _rules = rules;
 
         // Add the rule to the collection when created
-        _rules.Add(new PropertyValidationRule<T, TProperty>(expression, _validators, () => _customMessage, () => _customErrorCode, () => _condition, () => _unless));
+        rules.Add(new PropertyValidationRule<T, TProperty>(expression, _validators, () => _customMessage, () => _customErrorCode, () => _condition, () => _unless));
     }
 
     public IRuleBuilder<T, TProperty> NotNull()

@@ -4,6 +4,8 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Conductor.Transport.Http.Middleware;
 using System.Text.Json;
+using Conductor.Core;
+using Conductor.Interfaces;
 using Microsoft.AspNetCore.Http;
 
 namespace Conductor.Transport.Http.Extensions;

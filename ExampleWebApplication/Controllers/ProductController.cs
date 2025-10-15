@@ -2,6 +2,7 @@
 using ExampleWebApplication.Module;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
+using Conductor.Interfaces;
 using Conductor.Transport.Http;
 
 namespace ExampleWebApplication.Controllers;

@@ -61,7 +61,7 @@ ConductorStartup.ConfigureConductor(builder.Services);
 var app = builder.Build();
 
 // Initialize Conductor with service provider
-Conductor.Extensions.Conductor.Init(app.Services);
+Conductor.Core.Conductor.Init(app.Services);
 
 
 

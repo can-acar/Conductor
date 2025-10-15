@@ -5,6 +5,8 @@ using Conductor.Modules.Cache;
 using Conductor.Modules.Pipeline;
 using Microsoft.Extensions.DependencyInjection;
 using System.Linq;
+using Conductor.Interfaces;
+using Conductor.Services;
 
 namespace Conductor.Extensions;
 
@@ -42,7 +44,7 @@ public static class ConductorExtensions
     private static void RegisterHandlersFromAssembly(IServiceCollection services, Assembly assembly)
     {
         var types = assembly.GetTypes()
-            .Where(t => t.IsClass && !t.IsAbstract)
+            .Where(t => t is { IsClass: true, IsAbstract: false })
             .Where(t => t.GetMethods().Any(m =>
                 m.GetCustomAttribute<HandleAttribute>() != null ||
                 m.GetCustomAttribute<SagaAttribute>() != null ||
@@ -57,7 +59,7 @@ public static class ConductorExtensions
     private static void RegisterValidatorsFromAssembly(IServiceCollection services, Assembly assembly)
     {
         var validatorTypes = assembly.GetTypes()
-            .Where(t => t.IsClass && !t.IsAbstract)
+            .Where(t => t is { IsClass: true, IsAbstract: false })
             .Where(t => t.GetInterfaces().Any(i =>
                 i.IsGenericType &&
                 i.GetGenericTypeDefinition() == typeof(IValidator<>)))
@@ -81,7 +83,7 @@ public static class ConductorExtensions
                 services.AddScoped(validatorInterface, validatorType);
 
                 // Only register concrete type once to avoid duplicates
-                if (!services.Any(s => s.ServiceType == validatorType))
+                if (services.All(s => s.ServiceType != validatorType))
                 {
                     services.AddScoped(validatorType);
                 }

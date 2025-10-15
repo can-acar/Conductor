@@ -1,6 +1,8 @@
 using System.Net;
 using System.Text.Json;
 using Conductor.Attributes;
+using Conductor.Core;
+using Conductor.Interfaces;
 using Conductor.Transport;
 using Conductor.Transport.Http;
 using Microsoft.AspNetCore.Http;

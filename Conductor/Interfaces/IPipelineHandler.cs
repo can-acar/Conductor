@@ -1,4 +1,6 @@
-﻿namespace Conductor.Core;
+﻿using Conductor.Core;
+
+namespace Conductor.Interfaces;
 
 public interface IPipelineHandler<TData, TResponse>
 {

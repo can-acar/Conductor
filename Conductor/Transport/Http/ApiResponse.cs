@@ -1,4 +1,6 @@
 using System.Text.Json.Serialization;
+using Conductor.Core;
+using Conductor.Interfaces;
 
 namespace Conductor.Transport.Http;
 

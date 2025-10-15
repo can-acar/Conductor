@@ -1,15 +1,17 @@
-﻿namespace Conductor.Core;
+﻿using Conductor.Interfaces;
 
-public class Bus<T> : BaseRequest, IBus
+namespace Conductor.Core;
+
+public class Bus<T>(T data) : BaseRequest, IBus
 {
-    public T Data { get; set; }
-    public string CorrelationId { get; set; } = Guid.NewGuid().ToString();
+    public T Data { get; set; } = data;
+    public string CorrelationId { get; } = Guid.NewGuid().ToString();
     public Dictionary<string, object> Context { get; set; } = new();
-        
+
     object IBus.Data => Data!;
-        
-    public Bus(T data)
+
+    public void AddMetadata(string key, object value)
     {
-        Data = data;
+        Metadata[key] = value;
     }
 }

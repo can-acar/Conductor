@@ -1,4 +1,6 @@
-﻿namespace Conductor.Core;
+﻿using Conductor.Interfaces;
+
+namespace Conductor.Core;
 
 public class Event<T> : BaseRequest, IEvent
 {

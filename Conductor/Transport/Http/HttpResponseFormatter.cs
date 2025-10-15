@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using Conductor.Core;
+using Conductor.Interfaces;
 using Conductor.Transport;
 using ValidationExceptionAlias = Conductor.Attributes.ValidationException;
 
@@ -30,8 +32,8 @@ public class HttpResponseFormatter : BaseResponseFormatter<string>
 
         var apiResponse = ApiResponse<T>.CreateSuccess(
             data,
-            _options.SuccessMessage,
-            _options.IncludeTimestamp || _options.IncludeCorrelationId || _options.IncludeRequestId ? responseMetadata : null);
+            Options.SuccessMessage,
+            Options.IncludeTimestamp || Options.IncludeCorrelationId || Options.IncludeRequestId ? responseMetadata : null);
 
         return JsonSerializer.Serialize(apiResponse, _jsonOptions);
     }
@@ -44,8 +46,8 @@ public class HttpResponseFormatter : BaseResponseFormatter<string>
 
         var apiResponse = ApiResponse<object>.CreateError(
             exception,
-            _options.IncludeStackTrace,
-            _options.IncludeTimestamp || _options.IncludeCorrelationId || _options.IncludeRequestId ? responseMetadata : null);
+            Options.IncludeStackTrace,
+            Options.IncludeTimestamp || Options.IncludeCorrelationId || Options.IncludeRequestId ? responseMetadata : null);
 
         // Override message based on exception type
         apiResponse.Message = GetErrorMessage(exception);
@@ -55,7 +57,7 @@ public class HttpResponseFormatter : BaseResponseFormatter<string>
 
     public override bool ShouldFormat(object? context = null)
     {
-        if (!_options.WrapAllResponses)
+        if (!Options.WrapAllResponses)
             return false;
 
         if (context is HttpContext httpContext)
@@ -64,14 +66,14 @@ public class HttpResponseFormatter : BaseResponseFormatter<string>
             var contentType = httpContext.Response.ContentType?.ToLowerInvariant() ?? "";
 
             // Check excluded paths
-            if (_options.ExcludedPaths.Any(excludedPath =>
+            if (Options.ExcludedPaths.Any(excludedPath =>
                 path.StartsWith(excludedPath.ToLowerInvariant(), StringComparison.OrdinalIgnoreCase)))
             {
                 return false;
             }
 
             // Check excluded content types
-            if (_options.ExcludedContentTypes.Any(excludedType =>
+            if (Options.ExcludedContentTypes.Any(excludedType =>
             {
                 if (excludedType.EndsWith("*"))
                 {
@@ -103,7 +105,7 @@ public class HttpResponseFormatter : BaseResponseFormatter<string>
             ArgumentException => "Invalid request",
             InvalidOperationException => "Invalid operation",
             TimeoutException => "Request timeout",
-            _ => _options.DefaultErrorMessage
+            _ => Options.DefaultErrorMessage
         };
     }
 }

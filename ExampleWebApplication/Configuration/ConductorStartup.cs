@@ -4,8 +4,8 @@ public static class ConductorStartup
 {
     public static void ConfigureConductor(IServiceCollection services)
     {
-        Conductor.Extensions.Conductor.RegisterDependencyInjection(services);
-        Conductor.Extensions.Conductor.RegisterCacheModule(services);
-        Conductor.Extensions.Conductor.RegisterPipelineModule(services);
+        Conductor.Core.Conductor.RegisterDependencyInjection(services);
+        Conductor.Core.Conductor.RegisterCacheModule(services);
+        Conductor.Core.Conductor.RegisterPipelineModule(services);
     }
 }

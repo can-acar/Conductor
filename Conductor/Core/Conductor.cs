@@ -1,10 +1,13 @@
 ﻿using System.Reflection;
-using Conductor.Core;
+using Conductor.Extensions;
+using Conductor.Interfaces;
 using Conductor.Modules.Cache;
 using Conductor.Modules.Pipeline;
+using Conductor.Interfaces;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Conductor.Extensions;
+namespace Conductor.Core;
 
 public static class Conductor
 {
@@ -22,6 +25,9 @@ public static class Conductor
             options.HandlerAssemblies.Add(Assembly.GetExecutingAssembly());
             options.HandlerAssemblies.Add(Assembly.GetCallingAssembly());
         });
+        services.AddHttpContextAccessor();
+        services.AddSingleton<ICorrelationIdHelper, CorrelationIdHelper>();
+        services.AddLogging();
     }
 
     public static void RegisterCacheModule(IServiceCollection services)
@@ -33,6 +39,8 @@ public static class Conductor
     public static void RegisterPipelineModule(IServiceCollection services)
     {
         services.AddSingleton<IPipelineModule, PipelineModule>();
+        services.AddConductorPipeline();
+ 
     }
 
     public static IConductor GetConductor()

@@ -33,7 +33,7 @@ public class Startup
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env, IServiceProvider serviceProvider)
     {
         // Initialize Conductor
-        Conductor.Extensions.Conductor.Init(serviceProvider);
+        Conductor.Core.Conductor.Init(serviceProvider);
 
         if (env.IsDevelopment())
         {

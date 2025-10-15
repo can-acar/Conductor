@@ -18,7 +18,7 @@ public class ProductListQueries
 
     [Handle]
     [CacheModule(Duration = 60)] // Cache for 60 seconds
-    [Validate(ValidateRequest = true, ValidateResponse = false)]
+    [Validate(ValidateRequest = true, ValidateResponse = true)]
     [Audit(Category = "ProductQuery", LogRequest = true, LogResponse = true, LogExecutionTime = true)]
     public async Task<List<Product>> GetProducts(Query<ProductListQuery> query)
     {

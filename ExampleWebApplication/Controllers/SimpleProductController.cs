@@ -1,4 +1,5 @@
 using Conductor.Core;
+using Conductor.Interfaces;
 using Conductor.Middleware;
 using ExampleWebApplication.Module;
 using Microsoft.AspNetCore.Mvc;

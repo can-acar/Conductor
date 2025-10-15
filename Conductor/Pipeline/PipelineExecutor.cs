@@ -1,6 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Conductor.Core;
+using Conductor.Interfaces;
+using Conductor.Services;
+using Microsoft.AspNetCore.Http;
 
 namespace Conductor.Pipeline;
 
@@ -8,22 +11,24 @@ public class PipelineExecutor : IPipelineExecutor
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<PipelineExecutor> _logger;
+    private readonly IHttpContextAccessor _contextAccessor;
 
-    public PipelineExecutor(IServiceProvider serviceProvider, ILogger<PipelineExecutor> logger)
+    public PipelineExecutor(IServiceProvider serviceProvider, ILogger<PipelineExecutor> logger, IHttpContextAccessor contextAccessor)
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
+        _contextAccessor = contextAccessor;
     }
 
     public async Task<TResponse> ExecuteAsync<TResponse>(BaseRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
         cancellationToken.ThrowIfCancellationRequested();
+        var correlationId = _contextAccessor.HttpContext?.TraceIdentifier ?? Guid.NewGuid().ToString();
 
         var context = new PipelineContext
         {
-            UserId = request.UserId,
-            CorrelationId = request.CorrelationId
+            CorrelationId = correlationId
         };
 
         try
@@ -71,7 +76,7 @@ public class PipelineExecutor : IPipelineExecutor
         catch (Exception ex)
         {
             _logger.LogError(ex, "Pipeline execution failed for request {RequestType} with ID {RequestId}",
-                request.GetType().Name, context.RequestId);
+                request.GetType().Name, context.CorrelationId);
             throw;
         }
     }
@@ -124,6 +129,7 @@ public static class PipelineContextExtensions
         {
             return typedValue;
         }
+
         return default;
     }
 

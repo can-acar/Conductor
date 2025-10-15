@@ -1,4 +1,5 @@
 using Conductor.Attributes;
+using Conductor.Interfaces;
 using Conductor.Pipeline;
 
 namespace ExampleWebApplication;

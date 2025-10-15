@@ -1,4 +1,4 @@
-﻿namespace Conductor.Core;
+﻿namespace Conductor.Interfaces;
 
 public interface IQuery
 {

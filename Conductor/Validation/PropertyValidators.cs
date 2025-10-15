@@ -1,13 +1,7 @@
 using Conductor.Attributes;
+using Conductor.Interfaces;
 
 namespace Conductor.Validation;
-
-public interface IPropertyValidator<T, TProperty>
-{
-    Task<bool> IsValidAsync(T instance, TProperty value, CancellationToken cancellationToken = default);
-    string GetDefaultMessage();
-    string GetDefaultErrorCode();
-}
 
 public abstract class BasePropertyValidator<T, TProperty> : IPropertyValidator<T, TProperty>
 {

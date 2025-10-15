@@ -21,11 +21,6 @@ public class ValidateAttribute : Attribute
     }
 }
 
-public interface IValidator<T>
-{
-    Task<ValidationResult> ValidateAsync(T data, CancellationToken cancellationToken = default);
-}
-
 public class ValidationResult
 {
     public bool IsValid { get; set; }

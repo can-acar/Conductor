@@ -2,20 +2,10 @@ using Microsoft.Extensions.Logging;
 using Conductor.Transport;
 using ValidationExceptionAlias = Conductor.Attributes.ValidationException;
 using System.Text.Json;
+using Conductor.Core;
+using Conductor.Interfaces;
 
 namespace Conductor.Transport.MessageQueue;
-
-public class MessageQueueResponse
-{
-    public bool Success { get; set; } = true;
-    public object? Data { get; set; }
-    public string? Message { get; set; }
-    public List<string> Errors { get; set; } = new();
-    public ResponseMetadata? Metadata { get; set; }
-    public string MessageType { get; set; } = string.Empty;
-    public string RoutingKey { get; set; } = string.Empty;
-    public Dictionary<string, object> Headers { get; set; } = new();
-}
 
 public class MessageQueueFormatter : BaseResponseFormatter<MessageQueueResponse>
 {
@@ -42,29 +32,29 @@ public class MessageQueueFormatter : BaseResponseFormatter<MessageQueueResponse>
         {
             Success = true,
             Data = data,
-            Message = _options.SuccessMessage,
+            Message = Options.SuccessMessage,
             MessageType = typeof(T).Name,
             RoutingKey = GenerateRoutingKey(typeof(T), true),
-            Metadata = _options.IncludeTimestamp || _options.IncludeCorrelationId || _options.IncludeRequestId ? responseMetadata : null
+            Metadata = Options.IncludeTimestamp || Options.IncludeCorrelationId || Options.IncludeRequestId ? responseMetadata : null
         };
 
         // Add metadata to headers
-        if (_options.IncludeCorrelationId && !string.IsNullOrEmpty(responseMetadata.CorrelationId))
+        if (Options.IncludeCorrelationId && !string.IsNullOrEmpty(responseMetadata.CorrelationId))
         {
             response.Headers["correlation-id"] = responseMetadata.CorrelationId;
         }
 
-        if (_options.IncludeRequestId && !string.IsNullOrEmpty(responseMetadata.RequestId))
+        if (Options.IncludeRequestId && !string.IsNullOrEmpty(responseMetadata.RequestId))
         {
             response.Headers["request-id"] = responseMetadata.RequestId;
         }
 
-        if (_options.IncludeTimestamp)
+        if (Options.IncludeTimestamp)
         {
             response.Headers["timestamp"] = responseMetadata.Timestamp.ToString("O");
         }
 
-        if (_options.IncludeUserId && !string.IsNullOrEmpty(responseMetadata.UserId))
+        if (Options.IncludeUserId && !string.IsNullOrEmpty(responseMetadata.UserId))
         {
             response.Headers["user-id"] = responseMetadata.UserId;
         }
@@ -91,16 +81,16 @@ public class MessageQueueFormatter : BaseResponseFormatter<MessageQueueResponse>
             Errors = GetErrorMessages(exception),
             MessageType = "Error",
             RoutingKey = GenerateRoutingKey(exception.GetType(), false),
-            Metadata = _options.IncludeTimestamp || _options.IncludeCorrelationId || _options.IncludeRequestId ? responseMetadata : null
+            Metadata = Options.IncludeTimestamp || Options.IncludeCorrelationId || Options.IncludeRequestId ? responseMetadata : null
         };
 
         // Add metadata to headers
-        if (_options.IncludeCorrelationId && !string.IsNullOrEmpty(responseMetadata.CorrelationId))
+        if (Options.IncludeCorrelationId && !string.IsNullOrEmpty(responseMetadata.CorrelationId))
         {
             response.Headers["correlation-id"] = responseMetadata.CorrelationId;
         }
 
-        if (_options.IncludeRequestId && !string.IsNullOrEmpty(responseMetadata.RequestId))
+        if (Options.IncludeRequestId && !string.IsNullOrEmpty(responseMetadata.RequestId))
         {
             response.Headers["request-id"] = responseMetadata.RequestId;
         }
@@ -132,7 +122,7 @@ public class MessageQueueFormatter : BaseResponseFormatter<MessageQueueResponse>
             ArgumentException => "Invalid request",
             InvalidOperationException => "Invalid operation",
             TimeoutException => "Request timeout",
-            _ => _options.DefaultErrorMessage
+            _ => Options.DefaultErrorMessage
         };
     }
 
@@ -140,7 +130,7 @@ public class MessageQueueFormatter : BaseResponseFormatter<MessageQueueResponse>
     {
         var errors = new List<string> { exception.Message };
 
-        if (_options.IncludeStackTrace && !string.IsNullOrEmpty(exception.StackTrace))
+        if (Options.IncludeStackTrace && !string.IsNullOrEmpty(exception.StackTrace))
         {
             errors.Add($"Stack Trace: {exception.StackTrace}");
         }
@@ -205,13 +195,13 @@ public interface IMessageQueuePublisher
 
 public class MessageQueueConductorService
 {
-    private readonly Core.IConductor _conductor;
+    private readonly IConductor _conductor;
     private readonly MessageQueueFormatter _responseFormatter;
     private readonly IMessageQueuePublisher _publisher;
     private readonly ILogger<MessageQueueConductorService> _logger;
 
     public MessageQueueConductorService(
-        Core.IConductor conductor,
+        IConductor conductor,
         MessageQueueFormatter responseFormatter,
         IMessageQueuePublisher publisher,
         ILogger<MessageQueueConductorService> logger)

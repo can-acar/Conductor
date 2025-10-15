@@ -3,6 +3,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Text;
 using System.Text.Json;
+using Conductor.Core;
+using Conductor.Interfaces;
 using ValidationExceptionAlias = Conductor.Attributes.ValidationException;
 
 namespace Conductor.Transport.Http.Middleware;
@@ -76,7 +78,7 @@ public class ResponseFormatterMiddleware
         if (string.IsNullOrEmpty(responseContent))
         {
             // Empty response - create success response without data
-            var emptyResponse = await _responseFormatter.FormatSuccessAsync<object>(null!, new Conductor.Transport.ResponseMetadata());
+            var emptyResponse = await _responseFormatter.FormatSuccessAsync<object>(null!, new ResponseMetadata());
             await WriteFormattedResponse(context, emptyResponse, originalBodyStream);
             return;
         }
@@ -85,13 +87,13 @@ public class ResponseFormatterMiddleware
         {
             // Try to parse existing JSON and wrap it
             var existingData = JsonSerializer.Deserialize<object>(responseContent);
-            var wrappedResponse = await _responseFormatter.FormatSuccessAsync(existingData, new Conductor.Transport.ResponseMetadata());
+            var wrappedResponse = await _responseFormatter.FormatSuccessAsync(existingData, new ResponseMetadata());
             await WriteFormattedResponse(context, wrappedResponse, originalBodyStream);
         }
         catch (JsonException)
         {
             // Not JSON content - wrap as string
-            var wrappedResponse = await _responseFormatter.FormatSuccessAsync(responseContent, new Conductor.Transport.ResponseMetadata());
+            var wrappedResponse = await _responseFormatter.FormatSuccessAsync(responseContent, new ResponseMetadata());
             await WriteFormattedResponse(context, wrappedResponse, originalBodyStream);
         }
     }

@@ -68,6 +68,11 @@ public abstract class CacheableRequest : BaseRequest, ICacheableRequest
         var attribute = GetType().GetCustomAttributes(typeof(CacheableAttribute), true)
             .FirstOrDefault() as CacheableAttribute;
 
+        // take first 8 chars of a new GUID for uniqueness
+        var uuid = Guid.NewGuid().ToString("N").Substring(0, 8);
+        // or use full GUID if preferred
+
+
         if (!string.IsNullOrEmpty(attribute?.CacheKey))
         {
             return attribute.CacheKey;
@@ -80,7 +85,7 @@ public abstract class CacheableRequest : BaseRequest, ICacheableRequest
             return $"{GetType().Name}_{hash:X}";
         }
 
-        return $"{GetType().Name}_{UserId}";
+        return $"{GetType().Name}_{uuid}";
     }
 
     public virtual TimeSpan GetCacheDuration()
@@ -124,12 +129,14 @@ public abstract class AuditableRequest : BaseRequest, IAuditableRequest
         var attribute = GetType().GetCustomAttributes(typeof(AuditableAttribute), true)
             .FirstOrDefault() as AuditableAttribute;
 
+        var uuid = Guid.NewGuid().ToString("N").Substring(0, 8);
+
         if (attribute?.LogRequestData == true)
         {
             return System.Text.Json.JsonSerializer.Serialize(this);
         }
 
-        return $"Request: {GetType().Name}, User: {UserId}";
+        return $"Request: {GetType().Name}, Id: {uuid}";
     }
 }
 
@@ -191,7 +198,9 @@ public abstract class AuthorizedAuditableRequest : BaseRequest, IAuthorizedReque
             return System.Text.Json.JsonSerializer.Serialize(this);
         }
 
-        return $"Request: {GetType().Name}, User: {UserId}";
+        var uuid = Guid.NewGuid().ToString("N").Substring(0, 8);
+
+        return $"Request: {GetType().Name}, Id: {uuid}";
     }
 }
 
@@ -249,7 +258,9 @@ public abstract class FullPipelineRequest : BaseRequest, ICacheableRequest, ITra
         {
             return System.Text.Json.JsonSerializer.Serialize(this);
         }
+        
+        var uuid = Guid.NewGuid().ToString("N").Substring(0, 8);
 
-        return $"Request: {GetType().Name}, User: {UserId}";
+        return $"Request: {GetType().Name}, Id: {uuid}";
     }
 }

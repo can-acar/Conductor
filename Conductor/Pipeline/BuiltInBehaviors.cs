@@ -2,7 +2,9 @@ using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using Conductor.Attributes;
 using Conductor.Core;
+using Conductor.Interfaces;
 using Conductor.Validation;
+using Microsoft.AspNetCore.Http;
 using ValidationResultAlias = Conductor.Attributes.ValidationResult;
 using ValidationExceptionAlias = Conductor.Attributes.ValidationException;
 
@@ -12,33 +14,38 @@ public class LoggingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, 
     where TRequest : BaseRequest
 {
     private readonly ILogger<LoggingBehavior<TRequest, TResponse>> _logger;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public LoggingBehavior(ILogger<LoggingBehavior<TRequest, TResponse>> logger)
+    public LoggingBehavior(ILogger<LoggingBehavior<TRequest, TResponse>> logger, IHttpContextAccessor httpContextAccessor)
     {
         _logger = logger;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
     {
         var requestName = typeof(TRequest).Name;
-        var requestId = request.CorrelationId ?? Guid.NewGuid().ToString();
+        // get header from request if exists otherwise generate new guid
 
-        _logger.LogInformation("Handling {RequestName} with ID {RequestId} for User {UserId}",
-            requestName, requestId, request.UserId);
+
+        var correlationId = _httpContextAccessor.HttpContext?.Request.Headers["X-Correlation-ID"].FirstOrDefault()
+                            ?? Guid.NewGuid().ToString();
+
+        _logger.LogInformation("Handling {RequestName} with ID {CorrelationId}", requestName, correlationId);
 
         try
         {
             var response = await next();
 
-            _logger.LogInformation("Successfully handled {RequestName} with ID {RequestId}",
-                requestName, requestId);
+            _logger.LogInformation("Successfully handled {RequestName} with ID {CorrelationId}",
+                requestName, correlationId);
 
             return response;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error handling {RequestName} with ID {RequestId}: {ErrorMessage}",
-                requestName, requestId, ex.Message);
+            _logger.LogError(ex, "Error handling {RequestName} with ID {CorrelationId}: {ErrorMessage}",
+                requestName, correlationId, ex.Message);
             throw;
         }
     }
@@ -212,11 +219,13 @@ public class AuthorizationBehavior<TRequest, TResponse> : IPipelineBehavior<TReq
 {
     private readonly IAuthorizationService _authorizationService;
     private readonly ILogger<AuthorizationBehavior<TRequest, TResponse>> _logger;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public AuthorizationBehavior(IAuthorizationService authorizationService, ILogger<AuthorizationBehavior<TRequest, TResponse>> logger)
+    public AuthorizationBehavior(IAuthorizationService authorizationService, ILogger<AuthorizationBehavior<TRequest, TResponse>> logger, IHttpContextAccessor httpContextAccessor)
     {
         _authorizationService = authorizationService;
         _logger = logger;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
@@ -225,21 +234,19 @@ public class AuthorizationBehavior<TRequest, TResponse> : IPipelineBehavior<TReq
 
         if (requiredPermissions.Any())
         {
-            var isAuthorized = await _authorizationService.IsAuthorizedAsync(
-                request.UserId,
-                requiredPermissions,
-                cancellationToken);
+            var user = _httpContextAccessor.HttpContext?.User;
+            var userId = user?.Identity?.Name ?? user?.FindFirst("sub")?.Value ?? user?.FindFirst("uid")?.Value ?? "anonymous";
+
+            var isAuthorized = await _authorizationService.IsAuthorizedAsync(userId, requiredPermissions, cancellationToken);
 
             if (!isAuthorized)
             {
-                _logger.LogWarning("Authorization failed for user {UserId} on {RequestName}. Required permissions: {Permissions}",
-                    request.UserId, typeof(TRequest).Name, string.Join(", ", requiredPermissions));
+                _logger.LogWarning("Authorization failed for user {UserId} on {RequestName}. Required permissions: {Permissions}", userId, typeof(TRequest).Name, string.Join(", ", requiredPermissions));
 
                 throw new UnauthorizedAccessException($"Insufficient permissions for {typeof(TRequest).Name}");
             }
 
-            _logger.LogDebug("Authorization successful for user {UserId} on {RequestName}",
-                request.UserId, typeof(TRequest).Name);
+            _logger.LogDebug("Authorization successful for user {UserId} on {RequestName}", userId, typeof(TRequest).Name);
         }
 
         return await next();
@@ -251,21 +258,23 @@ public class AuditingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest,
 {
     private readonly IAuditService _auditService;
     private readonly ILogger<AuditingBehavior<TRequest, TResponse>> _logger;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public AuditingBehavior(IAuditService auditService, ILogger<AuditingBehavior<TRequest, TResponse>> logger)
+    public AuditingBehavior(IAuditService auditService, ILogger<AuditingBehavior<TRequest, TResponse>> logger, IHttpContextAccessor httpContextAccessor)
     {
         _auditService = auditService;
         _logger = logger;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
     {
+        var correlationId = _httpContextAccessor.HttpContext?.TraceIdentifier;
         var auditRecord = new AuditRecord
         {
-            UserId = request.UserId,
             Action = typeof(TRequest).Name,
             Timestamp = DateTime.UtcNow,
-            CorrelationId = request.CorrelationId,
+            CorrelationId = correlationId,
             Details = request.GetAuditDetails()
         };
 
@@ -278,8 +287,7 @@ public class AuditingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest,
 
             await _auditService.LogAsync(auditRecord, cancellationToken);
 
-            _logger.LogDebug("Audit logged for successful {RequestName} by user {UserId}",
-                typeof(TRequest).Name, request.UserId);
+            _logger.LogDebug("Audit logged for successful {RequestName}  CorrelationId {correlationId}", typeof(TRequest).Name, correlationId);
 
             return response;
         }
@@ -290,52 +298,12 @@ public class AuditingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest,
 
             await _auditService.LogAsync(auditRecord, cancellationToken);
 
-            _logger.LogWarning("Audit logged for failed {RequestName} by user {UserId}: {Error}",
-                typeof(TRequest).Name, request.UserId, ex.Message);
+            _logger.LogWarning("Audit logged for failed {RequestName}  CorrelationId {CorrelationId}: {Error}",
+                typeof(TRequest).Name, correlationId, ex.Message);
 
             throw;
         }
     }
-}
-
-public interface ICacheService
-{
-    Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default);
-    Task SetAsync<T>(string key, T value, TimeSpan duration, CancellationToken cancellationToken = default);
-    Task RemoveAsync(string key, CancellationToken cancellationToken = default);
-}
-
-public interface ITransactionService
-{
-    Task<ITransaction> BeginTransactionAsync(CancellationToken cancellationToken = default);
-}
-
-public interface ITransaction : IAsyncDisposable
-{
-    Task CommitAsync(CancellationToken cancellationToken = default);
-    Task RollbackAsync(CancellationToken cancellationToken = default);
-}
-
-public interface IAuthorizationService
-{
-    Task<bool> IsAuthorizedAsync(string userId, IEnumerable<string> permissions, CancellationToken cancellationToken = default);
-}
-
-public interface IAuditService
-{
-    Task LogAsync(AuditRecord record, CancellationToken cancellationToken = default);
-}
-
-public class AuditRecord
-{
-    public string UserId { get; set; } = string.Empty;
-    public string Action { get; set; } = string.Empty;
-    public DateTime Timestamp { get; set; }
-    public string? CorrelationId { get; set; }
-    public string? Details { get; set; }
-    public AuditStatus Status { get; set; }
-    public string? Response { get; set; }
-    public string? ErrorMessage { get; set; }
 }
 
 public enum AuditStatus

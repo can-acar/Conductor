@@ -1,5 +1,7 @@
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using Conductor.Core;
+using Conductor.Interfaces;
 using Conductor.Transport;
 using ValidationExceptionAlias = Conductor.Attributes.ValidationException;
 
@@ -75,7 +77,7 @@ public class GrpcResponseFormatter : BaseResponseFormatter<object>
             ArgumentException => "Invalid request",
             InvalidOperationException => "Invalid operation",
             TimeoutException => "Request timeout",
-            _ => _options.DefaultErrorMessage
+            _ => Options.DefaultErrorMessage
         };
     }
 }
@@ -101,10 +103,10 @@ public class GrpcResponseMetadataProvider : IResponseMetadataProvider
 // In a real implementation, this would use Grpc.Core types
 public abstract class ConductorGrpcServiceBase
 {
-    protected readonly Core.IConductor _conductor;
+    protected readonly IConductor _conductor;
     protected readonly GrpcResponseFormatter _responseFormatter;
 
-    protected ConductorGrpcServiceBase(Core.IConductor conductor, GrpcResponseFormatter responseFormatter)
+    protected ConductorGrpcServiceBase(IConductor conductor, GrpcResponseFormatter responseFormatter)
     {
         _conductor = conductor;
         _responseFormatter = responseFormatter;

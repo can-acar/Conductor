@@ -1,11 +1,41 @@
+using Conductor.Core;
+using Conductor.Interfaces;
+using Conductor.Pipeline;
+using Conductor.Services;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Conductor.Core;
-using Conductor.Pipeline;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 
 namespace Conductor.Extensions;
+
+public class DefaultCacheService : ICacheService
+{
+    private readonly Microsoft.Extensions.Caching.Memory.IMemoryCache _cache;
+
+    public DefaultCacheService(Microsoft.Extensions.Caching.Memory.IMemoryCache cache)
+    {
+        _cache = cache;
+    }
+
+    public Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default)
+    {
+        var value = _cache.Get<T>(key);
+        return Task.FromResult(value);
+    }
+
+    public Task SetAsync<T>(string key, T value, TimeSpan duration, CancellationToken cancellationToken = default)
+    {
+        _cache.Set(key, value, duration);
+        return Task.CompletedTask;
+    }
+
+    public Task RemoveAsync(string key, CancellationToken cancellationToken = default)
+    {
+        _cache.Remove(key);
+        return Task.CompletedTask;
+    }
+}
 
 public static class PipelineExtensions
 {
@@ -118,11 +148,6 @@ public static class PipelineExtensions
         return services;
     }
 
-    public static IServiceCollection AddAuthorizationBehavior(this IServiceCollection services)
-    {
-        services.TryAddScoped(typeof(IPipelineBehavior<,>), typeof(AuthorizationBehavior<,>));
-        return services;
-    }
 
     public static IServiceCollection AddAuditingBehavior(this IServiceCollection services)
     {
@@ -132,10 +157,7 @@ public static class PipelineExtensions
 
     public static IServiceCollection ConfigurePipelinePerformance(this IServiceCollection services, TimeSpan warningThreshold)
     {
-        services.Configure<PipelinePerformanceOptions>(options =>
-        {
-            options.WarningThreshold = warningThreshold;
-        });
+        services.Configure<PipelinePerformanceOptions>(options => { options.WarningThreshold = warningThreshold; });
 
         services.AddSingleton(typeof(TimeSpan), provider =>
         {
@@ -178,41 +200,6 @@ public class PipelinePerformanceOptions
 }
 
 // Default implementations for supporting services
-public class DefaultCacheService : ICacheService
-{
-    private readonly Microsoft.Extensions.Caching.Memory.IMemoryCache _cache;
-
-    public DefaultCacheService(Microsoft.Extensions.Caching.Memory.IMemoryCache cache)
-    {
-        _cache = cache;
-    }
-
-    public Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default)
-    {
-        var value = _cache.Get<T>(key);
-        return Task.FromResult(value);
-    }
-
-    public Task SetAsync<T>(string key, T value, TimeSpan duration, CancellationToken cancellationToken = default)
-    {
-        _cache.Set(key, value, duration);
-        return Task.CompletedTask;
-    }
-
-    public Task RemoveAsync(string key, CancellationToken cancellationToken = default)
-    {
-        _cache.Remove(key);
-        return Task.CompletedTask;
-    }
-}
-
-public class DefaultTransactionService : ITransactionService
-{
-    public Task<ITransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
-    {
-        return Task.FromResult<ITransaction>(new DefaultTransaction());
-    }
-}
 
 public class DefaultTransaction : ITransaction
 {
@@ -238,29 +225,11 @@ public class DefaultTransaction : ITransaction
             {
                 // Auto-rollback if not committed
             }
+
             _disposed = true;
         }
+
         return ValueTask.CompletedTask;
-    }
-}
-
-public class DefaultAuthorizationService : IAuthorizationService
-{
-    private readonly Microsoft.Extensions.Logging.ILogger<DefaultAuthorizationService> _logger;
-
-    public DefaultAuthorizationService(Microsoft.Extensions.Logging.ILogger<DefaultAuthorizationService> logger)
-    {
-        _logger = logger;
-    }
-
-    public Task<bool> IsAuthorizedAsync(string userId, IEnumerable<string> permissions, CancellationToken cancellationToken = default)
-    {
-        // Default implementation - always authorize
-        // Override this with your actual authorization logic
-        _logger.LogDebug("Authorization check for user {UserId} with permissions {Permissions}",
-            userId, string.Join(", ", permissions));
-
-        return Task.FromResult(true);
     }
 }
 
@@ -276,7 +245,7 @@ public class DefaultAuditService : IAuditService
     public Task LogAsync(AuditRecord record, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Audit: {UserId} performed {Action} at {Timestamp} - Status: {Status}",
-            record.UserId, record.Action, record.Timestamp, record.Status);
+            record.CorrelationId, record.Action, record.Timestamp, record.Status);
 
         if (!string.IsNullOrEmpty(record.ErrorMessage))
         {

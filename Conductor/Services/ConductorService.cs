@@ -49,7 +49,9 @@ public class ConductorService : IConductor
     public async Task<object> Send(BaseRequest request, CancellationToken cancellationToken = default)
     {
         // Use pipeline executor if available, otherwise fallback to legacy execution
-        var pipelineExecutor = _serviceProvider.GetService<IPipelineExecutor>();
+        // Create scope to resolve scoped IPipelineExecutor service
+        using var scope = _serviceScopeFactory.CreateScope();
+        var pipelineExecutor = scope.ServiceProvider.GetService<IPipelineExecutor>();
         if (pipelineExecutor != null)
         {
             return await pipelineExecutor.ExecuteAsync<object>(request, cancellationToken);
@@ -832,7 +834,7 @@ public class ConductorService : IConductor
         ArgumentNullException.ThrowIfNull(transactionAttribute);
         cancellationToken.ThrowIfCancellationRequested();
 
-    using var transactionScope = new ConductorAttributes.TransactionScope(transactionAttribute);
+        await using var transactionScope = new ConductorAttributes.TransactionScope(transactionAttribute);
         try
         {
             using var scope = _serviceScopeFactory.CreateScope();

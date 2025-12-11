@@ -55,7 +55,8 @@ public class CorrelationIdHelper : ICorrelationIdHelper
 
     public void SetCorrelationId(string correlationId)
     {
-        throw new NotImplementedException();
+        _correlationId = correlationId;
+        SetKeyHeader();
     }
 
     private bool HasCorrelationId()

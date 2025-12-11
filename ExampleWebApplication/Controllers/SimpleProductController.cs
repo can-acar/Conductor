@@ -34,7 +34,6 @@ public class SimpleProductController : ControllerBase
         // Pagination info'yu header'a ekle - middleware bunu kullanacak
         var pagination = CreatePaginationInfo(query.Page, query.PageSize, products.Count);
         HttpContext.SetPaginationHeader(pagination);
-
         return products;
     }
 

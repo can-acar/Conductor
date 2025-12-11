@@ -7,5 +7,5 @@ namespace Conductor.Interfaces;
 public interface ICorrelationIdHelper
 {
     void SetCorrelationId(string correlationId);
-    string GetCorrelationId();
+    string? GetCorrelationId();
 }

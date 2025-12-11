@@ -14,75 +14,75 @@ namespace Conductor.Core;
 /// </summary>
 public class CorrelationIdHelper : ICorrelationIdHelper
 {
-    private string _correlationId;
-    private readonly IHttpContextAccessor _httpContextAccessor;
+	private string _correlationId;
+	private readonly IHttpContextAccessor _httpContextAccessor;
+	private readonly string[] _refIdKeys = { "traceparent", "x-correlation-id", "x-client-trace-id", "x-request-id" };
 
-    private readonly string[] _refIdKeys = { "traceparent", "x-correlation-id", "x-client-trace-id", "x-request-id" };
+	public CorrelationIdHelper(IHttpContextAccessor httpContextAccessor)
+	{
+		// null checked in DI
+		_httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
+	}
 
-    public CorrelationIdHelper(IHttpContextAccessor httpContextAccessor)
-    {
-        // null checked in DI
+	public string? GetCorrelationId()
+	{
+		if (HasCorrelationId())
+		{
+			if (_correlationId == null)
+			{
+				var context = _httpContextAccessor.HttpContext;
+				if (context != null)
+				{
+					foreach (var refKey in _refIdKeys)
+					{
+						if (context.Request.Headers.TryGetValue(refKey, out StringValues values) && !StringValues.IsNullOrEmpty(values))
+						{
+							_correlationId = values.First()!;
+							break;
+						}
+					}
+				}
+			}
+		}
+		else
+		{
+			_correlationId = Guid.NewGuid().ToString();
+			SetKeyHeader();
+		}
+		return _correlationId;
+	}
 
-        _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
-    }
+	public void SetCorrelationId(string correlationId)
+	{
+		_correlationId = correlationId;
+		SetKeyHeader();
+	}
 
-    public string? GetCorrelationId()
-    {
-        if (HasCorrelationId())
-        {
-            if (_correlationId == null)
-            {
-                var context = _httpContextAccessor.HttpContext;
-                if (context != null)
-                {
-                    foreach (var refKey in _refIdKeys)
-                    {
-                        if (context.Request.Headers.TryGetValue(refKey, out StringValues values) && !StringValues.IsNullOrEmpty(values))
-                        {
-                            _correlationId = values.First()!;
-                            break;
-                        }
-                    }
-                }
-            }
-            
-        }else{
-            _correlationId = Guid.NewGuid().ToString();
-            SetKeyHeader();   
-        }
-        return _correlationId;
-    }
+	private bool HasCorrelationId()
+	{
+		var context = _httpContextAccessor.HttpContext;
+		if (context == null)
+			return false;
+		return context.Request.Headers.ContainsKey("traceparent");
+	}
 
-    public void SetCorrelationId(string correlationId)
-    {
-        _correlationId = correlationId;
-        SetKeyHeader();
-    }
-
-    private bool HasCorrelationId()
-    {
-        var context = _httpContextAccessor.HttpContext;
-        if (context == null)
-            return false;
-
-        return context.Request.Headers.ContainsKey("traceparent");
-    }
-
-    private void SetKeyHeader()
-    {
-        var context = _httpContextAccessor.HttpContext;
-        if (context !=null){
-            if (HasCorrelationId()){
-                // already has one, remove it
-                foreach (var refKey in _refIdKeys)
-                {
-                    if (context.Request.Headers.ContainsKey(refKey))
-                    {
-                        context.Request.Headers.Remove(refKey);
-                    }
-                    context.Request.Headers.Append(refKey, _correlationId!);
-                }
-            }
-        }
-    }
+	private void SetKeyHeader()
+	{
+		var context = _httpContextAccessor.HttpContext;
+		if (context != null)
+		{
+			if (HasCorrelationId())
+			{
+				// already has one, remove it
+				foreach (var refKey in _refIdKeys)
+				{
+					if (context.Request.Headers.ContainsKey(refKey))
+					{
+						context.Request.Headers.Remove(refKey);
+					}
+					context.Request.Headers.Append(refKey, _correlationId!);
+				}
+			}
+		}
+	}
 }

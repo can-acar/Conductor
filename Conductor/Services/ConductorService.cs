@@ -4,13 +4,15 @@ using System.Diagnostics;
 using System.Reflection;
 using Conductor.Attributes;
 using Conductor.Core;
+using Conductor.Enums;
 using Conductor.Interfaces;
 using Conductor.Modules.Cache;
 using Conductor.Modules.Pipeline;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using ConductorValidationException = Conductor.Attributes.ValidationException;
+using ConductorValidationException = Conductor.Core.ValidationException;
 using ConductorAttributes = Conductor.Attributes;
+using ValidationResult = Conductor.Core.ValidationResult;
 
 namespace Conductor.Services;
 
@@ -677,7 +679,7 @@ public class ConductorService : IConductor
                 var validateMethod = validatorInterfaceType.GetMethod("ValidateAsync");
                 if (validateMethod != null)
                 {
-                    var validationTask = (Task<ConductorAttributes.ValidationResult>)validateMethod.Invoke(autoValidator, [request, cancellationToken])!;
+                    var validationTask = (Task<ValidationResult>)validateMethod.Invoke(autoValidator, [request, cancellationToken])!;
                     var validationResult = await validationTask;
 
                     if (!validationResult.IsValid && validateAttribute.ThrowOnValidationError)
@@ -701,7 +703,7 @@ public class ConductorService : IConductor
                         var validateMethod = validatorType.GetMethod("ValidateAsync");
                         if (validateMethod != null)
                         {
-                            var validationTask = (Task<ConductorAttributes.ValidationResult>)validateMethod.Invoke(validator, new object[] { request, CancellationToken.None })!;
+                            var validationTask = (Task<ValidationResult>)validateMethod.Invoke(validator, new object[] { request, CancellationToken.None })!;
                             var validationResult = await validationTask;
 
                             if (!validationResult.IsValid && validateAttribute.ThrowOnValidationError)
@@ -723,12 +725,12 @@ public class ConductorService : IConductor
             {
                 if (validateAttribute.ThrowOnValidationError)
                 {
-                    var errors = validationResults.Select(vr => new ConductorAttributes.ValidationError(
+                    var errors = validationResults.Select(vr => new ValidationError(
                         vr.MemberNames.FirstOrDefault() ?? "",
                         vr.ErrorMessage ?? "",
                         "DataAnnotation")).ToArray();
 
-                    throw new ConductorValidationException(ConductorAttributes.ValidationResult.Failure(errors));
+                    throw new ConductorValidationException(ValidationResult.Failure(errors));
                 }
             }
         }
@@ -761,7 +763,7 @@ public class ConductorService : IConductor
                 var validateMethod = validatorInterfaceType.GetMethod("ValidateAsync");
                 if (validateMethod != null)
                 {
-                    var validationTask = (Task<ConductorAttributes.ValidationResult>)validateMethod.Invoke(autoValidator, new object[] { response, CancellationToken.None })!;
+                    var validationTask = (Task<ValidationResult>)validateMethod.Invoke(autoValidator, new object[] { response, CancellationToken.None })!;
                     var validationResult = await validationTask;
 
                     if (!validationResult.IsValid && validateAttribute.ThrowOnValidationError)
@@ -785,7 +787,7 @@ public class ConductorService : IConductor
                         var validateMethod = validatorType.GetMethod("ValidateAsync");
                         if (validateMethod != null)
                         {
-                            var validationTask = (Task<ConductorAttributes.ValidationResult>)validateMethod.Invoke(validator, new object[] { response, CancellationToken.None })!;
+                            var validationTask = (Task<ValidationResult>)validateMethod.Invoke(validator, new object[] { response, CancellationToken.None })!;
                             var validationResult = await validationTask;
 
                             if (!validationResult.IsValid && validateAttribute.ThrowOnValidationError)
@@ -807,12 +809,12 @@ public class ConductorService : IConductor
             {
                 if (validateAttribute.ThrowOnValidationError)
                 {
-                    var errors = validationResults.Select(vr => new ConductorAttributes.ValidationError(
+                    var errors = validationResults.Select(vr => new ValidationError(
                         vr.MemberNames.FirstOrDefault() ?? "",
                         vr.ErrorMessage ?? "",
                         "DataAnnotation")).ToArray();
 
-                    throw new ConductorValidationException(ConductorAttributes.ValidationResult.Failure(errors));
+                    throw new ConductorValidationException(ValidationResult.Failure(errors));
                 }
             }
         }
@@ -834,7 +836,7 @@ public class ConductorService : IConductor
         ArgumentNullException.ThrowIfNull(transactionAttribute);
         cancellationToken.ThrowIfCancellationRequested();
 
-        await using var transactionScope = new ConductorAttributes.TransactionScope(transactionAttribute);
+        await using var transactionScope = new TransactionScope(transactionAttribute);
         try
         {
             using var scope = _serviceScopeFactory.CreateScope();

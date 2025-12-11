@@ -1,4 +1,5 @@
 using Conductor.Attributes;
+using Conductor.Core;
 using Conductor.Interfaces;
 using Conductor.Pipeline;
 

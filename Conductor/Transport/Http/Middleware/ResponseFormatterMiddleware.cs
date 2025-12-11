@@ -5,7 +5,7 @@ using System.Text;
 using System.Text.Json;
 using Conductor.Core;
 using Conductor.Interfaces;
-using ValidationExceptionAlias = Conductor.Attributes.ValidationException;
+using ValidationExceptionAlias = Conductor.Core.ValidationException;
 
 namespace Conductor.Transport.Http.Middleware;
 

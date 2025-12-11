@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Conductor.Transport;
-using ValidationExceptionAlias = Conductor.Attributes.ValidationException;
+using ValidationExceptionAlias = Conductor.Core.ValidationException;
 using System.Text.Json;
 using Conductor.Core;
 using Conductor.Interfaces;

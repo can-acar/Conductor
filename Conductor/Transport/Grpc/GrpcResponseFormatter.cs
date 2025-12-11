@@ -3,7 +3,7 @@ using System.Text.Json;
 using Conductor.Core;
 using Conductor.Interfaces;
 using Conductor.Transport;
-using ValidationExceptionAlias = Conductor.Attributes.ValidationException;
+using ValidationExceptionAlias = Conductor.Core.ValidationException;
 
 namespace Conductor.Transport.Grpc;
 

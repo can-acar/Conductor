@@ -2,10 +2,10 @@
 
 public class Query<T> : BaseRequest
 {
-    public T Data { get; set; }
+	public T Data { get; set; }
 
-    public Query(T data)
-    {
-        Data = data;
-    }
+	public Query(T data)
+	{
+		Data = data;
+	}
 }

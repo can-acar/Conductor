@@ -2,6 +2,8 @@ using Conductor.Interfaces;
 using ExampleWebApplication.Behaviors;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
+namespace ExampleWebApplication.Extensions;
+
 public static class PipelineExtensions
 {
     // This class is intentionally left empty.

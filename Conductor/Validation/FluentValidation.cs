@@ -1,6 +1,7 @@
 using System.Linq.Expressions;
 using System.Reflection;
 using Conductor.Attributes;
+using Conductor.Core;
 using Conductor.Interfaces;
 
 namespace Conductor.Validation;

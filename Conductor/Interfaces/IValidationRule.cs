@@ -1,6 +1,7 @@
 using Conductor.Attributes;
+using Conductor.Core;
 
-namespace Conductor.Validation;
+namespace Conductor.Interfaces;
 
 public interface IValidationRule<in T>
 {
